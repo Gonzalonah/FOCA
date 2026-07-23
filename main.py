@@ -1,0 +1,13 @@
+"""hacer el sitio web de FOCA (Flujo de stOck y Control de cAja)
+- control de usuarios (pueden crear usuarios, asignar roles y permisos y emprendimientos)
+- control de stock por emprendimiento
+- control de caja por emprendimiento
+- control de ventas por emprendimiento
+- control de compras efectivas por emprendimiento
+- control de proveedores por emprendimiento
+- control de clientes por emprendimiento
+- control de reportes con estadísticas por emprendimiento
+- control de configuraciones por emprendimiento
+- control de notificaciones por emprendimiento
+- cobros con afip
+- cobros con mercadopago link de pago y mas """ 
