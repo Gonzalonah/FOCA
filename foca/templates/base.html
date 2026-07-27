@@ -6,8 +6,8 @@
     <title>FOCA - {% block title %}Gestión{% endblock %}</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome para iconos -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -27,6 +27,7 @@
                                 <i class="fas fa-home"></i> Dashboard
                             </a>
                         </li>
+                        <!-- Inventario con dropdown -->
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="inventarioDropdown" role="button" data-bs-toggle="dropdown">
                                 <i class="fas fa-boxes"></i> Inventario
@@ -40,64 +41,63 @@
                                 </a></li>
                             </ul>
                         </li>
+                        <!-- Clientes -->
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'listar_clientes' %}">
+                                <i class="fas fa-users"></i> Clientes
+                            </a>
+                        </li>
+                        <!-- Ventas con dropdown -->
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="ventasDropdown" role="button" data-bs-toggle="dropdown">
                                 <i class="fas fa-shopping-cart"></i> Ventas
                             </a>
                             <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="#">
+                                <li><a class="dropdown-item" href="{% url 'finalizar_venta' %}">
                                     <i class="fas fa-plus"></i> Nueva Venta
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'ver_carrito' %}">
+                                    <i class="fas fa-shopping-basket"></i> Carrito
                                 </a></li>
                                 <li><a class="dropdown-item" href="#">
                                     <i class="fas fa-list"></i> Historial
                                 </a></li>
                             </ul>
                         </li>
+                        <!-- Caja (preparado) -->
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="cajaDropdown" role="button" data-bs-toggle="dropdown">
                                 <i class="fas fa-cash-register"></i> Caja
                             </a>
                             <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="#">
-                                    <i class="fas fa-play"></i> Abrir Caja
-                                </a></li>
-                                <li><a class="dropdown-item" href="#">
-                                    <i class="fas fa-stop"></i> Cerrar Caja
-                                </a></li>
-                                <li><a class="dropdown-item" href="#">
-                                    <i class="fas fa-history"></i> Movimientos
-                                </a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-play"></i> Abrir Caja</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-stop"></i> Cerrar Caja</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-history"></i> Movimientos</a></li>
                             </ul>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#">
-                                <i class="fas fa-chart-bar"></i> Reportes
-                            </a>
+                            <a class="nav-link" href="#"><i class="fas fa-chart-bar"></i> Reportes</a>
                         </li>
                     {% endif %}
                 </ul>
                 <ul class="navbar-nav">
                     {% if user.is_authenticated %}
-                        <li class="nav-item">
-                            <span class="nav-link">
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
                                 <i class="fas fa-user"></i> {{ user.username }}
-                            </span>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'logout' %}">
-                                <i class="fas fa-sign-out-alt"></i> Salir
                             </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><span class="dropdown-item disabled">{{ user.perfil.emprendimiento.nombre }}</span></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'logout' %}"><i class="fas fa-sign-out-alt"></i> Cerrar sesión</a></li>
+                            </ul>
                         </li>
                     {% else %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'login' %}">
-                                <i class="fas fa-sign-in-alt"></i> Ingresar
-                            </a>
+                            <a class="nav-link" href="{% url 'login' %}"><i class="fas fa-sign-in-alt"></i> Ingresar</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'register' %}">
-                                <i class="fas fa-user-plus"></i> Registrarse
-                            </a>
+                            <a class="nav-link" href="{% url 'register' %}"><i class="fas fa-user-plus"></i> Registrarse</a>
                         </li>
                     {% endif %}
                 </ul>
@@ -106,7 +106,6 @@
     </nav>
 
     <div class="container mt-4">
-        <!-- Mensajes de alerta -->
         {% if messages %}
             {% for message in messages %}
                 <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
@@ -116,11 +115,9 @@
             {% endfor %}
         {% endif %}
 
-        {% block content %}
-        {% endblock %}
+        {% block content %}{% endblock %}
     </div>
 
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     {% block extra_js %}{% endblock %}
 </body>

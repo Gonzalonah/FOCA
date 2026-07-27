@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
-from .models import Perfil, Emprendimiento, Producto
+from .models import Perfil, Emprendimiento, Producto, Cliente, Venta
 
 class RegistroForm(UserCreationForm):
     email = forms.EmailField(required=True)
@@ -43,4 +43,20 @@ class ProductoForm(forms.ModelForm):
             'precio_venta': 'Precio de venta',
             'stock_actual': 'Stock actual',
             'stock_minimo': 'Stock mínimo',
+        }
+
+class ClienteForm(forms.ModelForm):
+    class Meta:
+        model = Cliente
+        fields = ['nombre', 'email', 'telefono', 'direccion', 'cuit']
+        widgets = {
+            'direccion': forms.Textarea(attrs={'rows': 2}),
+        }
+
+class VentaForm(forms.ModelForm):
+    class Meta:
+        model = Venta
+        fields = ['cliente', 'metodo_pago']
+        widgets = {
+            'cliente': forms.Select(attrs={'class': 'form-select'}),
         }

@@ -1,0 +1,39 @@
+    {% extends 'base.html' %}
+{% block title %}Cerrar Caja{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h3>Cerrar Caja</h3>
+            </div>
+            <div class="card-body">
+                <h5>Resumen de la jornada</h5>
+                <table class="table">
+                    <tr><th>Saldo inicial:</th><td>${{ caja.saldo_inicial }}</td></tr>
+                    <tr><th>Ingresos (ventas):</th><td>${{ ingresos }}</td></tr>
+                    <tr><th>Egresos (gastos):</th><td>${{ egresos }}</td></tr>
+                    <tr><th><strong>Saldo esperado:</strong></th><td><strong>${{ saldo_esperado }}</strong></td></tr>
+                    <tr><th><strong>Saldo actual:</strong></th><td><strong>${{ caja.saldo_actual }}</strong></td></tr>
+                </table>
+                
+                {% if saldo_esperado != caja.saldo_actual %}
+                <div class="alert alert-warning">
+                    ⚠️ Hay una diferencia de ${{ saldo_esperado|add:caja.saldo_actual|floatformat:2 }}
+                    entre el saldo esperado y el saldo actual.
+                </div>
+                {% endif %}
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'estado_caja' %}" class="btn btn-secondary">Volver</a>
+                        <button type="submit" class="btn btn-danger">Cerrar Caja</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

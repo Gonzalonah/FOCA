@@ -55,7 +55,7 @@
                     </div>
                     <i class="fas fa-cash-register fa-3x opacity-50"></i>
                 </div>
-                <a href="#" class="btn btn-light btn-sm mt-2">
+                <a href="{% url 'estado_caja' %}" class="btn btn-light btn-sm mt-2">
                     <i class="fas fa-eye"></i> Ver caja
                 </a>
             </div>
@@ -66,13 +66,19 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="card-title">Ventas Hoy</h6>
-                        <h2 class="display-6">0</h2>
+                        <h6 class="card-title">Estado Caja</h6>
+                        <h2 class="display-6">
+                            {% if caja_estado == 'abierta' %}
+                                <span class="badge bg-success fs-2">Abierta</span>
+                            {% else %}
+                                <span class="badge bg-danger fs-2">Cerrada</span>
+                            {% endif %}
+                        </h2>
                     </div>
-                    <i class="fas fa-shopping-cart fa-3x opacity-50"></i>
+                    <i class="fas fa-cash-register fa-3x opacity-50"></i>
                 </div>
-                <a href="#" class="btn btn-light btn-sm mt-2">
-                    <i class="fas fa-eye"></i> Ver ventas
+                <a href="{% url 'estado_caja' %}" class="btn btn-light btn-sm mt-2">
+                    <i class="fas fa-cog"></i> Gestionar
                 </a>
             </div>
         </div>
@@ -108,7 +114,7 @@
             <div class="card-body">
                 <i class="fas fa-shopping-cart fa-3x text-warning"></i>
                 <h6 class="mt-2">Nueva Venta</h6>
-                <a href="#" class="btn btn-warning btn-sm w-100">Ir</a>
+                <a href="{% url 'finalizar_venta' %}" class="btn btn-warning btn-sm w-100">Ir</a>
             </div>
         </div>
     </div>
@@ -117,7 +123,7 @@
             <div class="card-body">
                 <i class="fas fa-users fa-3x text-info"></i>
                 <h6 class="mt-2">Clientes</h6>
-                <a href="#" class="btn btn-info btn-sm w-100">Ir</a>
+                <a href="{% url 'listar_clientes' %}" class="btn btn-info btn-sm w-100">Ir</a>
             </div>
         </div>
     </div>
@@ -141,7 +147,7 @@
     </div>
 </div>
 
-<!-- Lista de productos recientes (opcional) -->
+<!-- Lista de productos recientes -->
 <div class="row mt-4">
     <div class="col-12">
         <h3><i class="fas fa-clock"></i> Últimos productos agregados</h3>

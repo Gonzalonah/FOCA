@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}Confirmar Venta{% endblock %}
+
+{% block content %}
+<h3>Resumen de la venta</h3>
+<table class="table">
+    <thead>
+        <tr><th>Producto</th><th>Cantidad</th><th>Subtotal</th></tr>
+    </thead>
+    <tbody>
+        {% for item in items %}
+        <tr>
+            <td>{{ item.producto.nombre }}</td>
+            <td>{{ item.cantidad }}</td>
+            <td>${{ item.subtotal }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr><th colspan="2">Total</th><th>${{ total }}</th></tr>
+    </tfoot>
+</table>
+
+<hr>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <div class="d-flex justify-content-between">
+        <a href="{% url 'ver_carrito' %}" class="btn btn-secondary">Volver al carrito</a>
+        <button type="submit" class="btn btn-success">Confirmar Venta</button>
+    </div>
+</form>
+{% endblock %}

@@ -70,3 +70,46 @@ class MovimientoStock(models.Model):
 
     def __str__(self):
         return f"{self.producto.nombre} - {self.tipo} {self.cantidad}"
+
+# Cliente
+class Cliente(models.Model):
+    emprendimiento = models.ForeignKey(Emprendimiento, on_delete=models.CASCADE)
+    nombre = models.CharField(max_length=100)
+    email = models.EmailField(blank=True)
+    telefono = models.CharField(max_length=20, blank=True)
+    direccion = models.TextField(blank=True)
+    cuit = models.CharField(max_length=20, blank=True)
+    creado = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.nombre
+
+# Venta
+class Venta(models.Model):
+    emprendimiento = models.ForeignKey(Emprendimiento, on_delete=models.CASCADE)
+    cliente = models.ForeignKey(Cliente, on_delete=models.SET_NULL, null=True, blank=True)
+    fecha = models.DateTimeField(auto_now_add=True)
+    total = models.DecimalField(max_digits=12, decimal_places=2)
+    metodo_pago = models.CharField(max_length=50, default='efectivo')
+    factura_electronica = models.CharField(max_length=50, blank=True)
+    estado = models.CharField(max_length=20, default='completada')
+    creado = models.DateTimeField(auto_now_add=True)
+
+# DetalleVenta
+class DetalleVenta(models.Model):
+    venta = models.ForeignKey(Venta, on_delete=models.CASCADE)
+    producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
+    cantidad = models.IntegerField()
+    precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2)
+
+class MovimientoCaja(models.Model):
+    TIPO = (('ingreso', 'Ingreso'), ('egreso', 'Egreso'))
+    caja = models.ForeignKey(Caja, on_delete=models.CASCADE)
+    tipo = models.CharField(max_length=10, choices=TIPO)
+    monto = models.DecimalField(max_digits=12, decimal_places=2)
+    descripcion = models.CharField(max_length=200)
+    fecha = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.tipo} - ${self.monto}"

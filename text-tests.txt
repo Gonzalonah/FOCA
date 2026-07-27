@@ -4,22 +4,14 @@ def dashboard(request):
     emp = perfil.emprendimiento
     productos = Producto.objects.filter(emprendimiento=emp)
     caja, _ = Caja.objects.get_or_create(emprendimiento=emp)
-    
-    # Los 5 productos más recientes
-    productos_recientes = productos.order_by('-creado')[:5]
-    
     context = {
         'emprendimiento': emp,
         'total_productos': productos.count(),
         'stock_bajo': productos.filter(stock_actual__lte=F('stock_minimo')).count(),
         'saldo_caja': caja.saldo_actual,
-        'productos_recientes': productos_recientes,
+        'caja_estado': caja.estado,
     }
     return render(request, 'core/dashboard.html', context)
-
-
-path('productos/', views.listar_productos, name='listar_productos'),
-
 
 """foca/                      # Raíz del proyecto (donde está manage.py)
 ├── foca/                  # Carpeta del proyecto
