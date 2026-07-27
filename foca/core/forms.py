@@ -37,3 +37,12 @@ class ProductoForm(forms.ModelForm):
             'precio_costo': forms.NumberInput(attrs={'step': '0.01'}),
             'precio_venta': forms.NumberInput(attrs={'step': '0.01'}),
         }
+        labels = {
+            'nombre': 'Nombre del producto',
+            'descripcion': 'Descripción',
+            'codigo_barra': 'Código de barras (opcional)',
+            'precio_costo': 'Precio de costo',
+            'precio_venta': 'Precio de venta',
+            'stock_actual': 'Stock actual',
+            'stock_minimo': 'Stock mínimo',
+        }

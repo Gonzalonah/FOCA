@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block title %}{{ accion }} Producto{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3>{{ accion }} Producto</h3>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form.as_p }}
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'listar_productos' %}" class="btn btn-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+
+"""foca/                      # Raíz del proyecto (donde está manage.py)
+├── foca/                  # Carpeta del proyecto
+│   ├── __init__.py
+│   ├── settings.py
+│   ├── urls.py
+│   └── wsgi.py
+├── core/                  # App principal
+│   ├── __init__.py
+│   ├── models.py
+│   ├── views.py
+│   ├── forms.py
+│   └── urls.py
+├── templates/             # ¡Esta carpeta debe existir!
+│   ├── base.html
+│   ├── registration/
+│   │   ├── login.html
+│   │   └── register.html
+│   └── core/
+│       └── dashboard.html
+├── manage.py
+├── .env
+└── vercel.json
+"""
