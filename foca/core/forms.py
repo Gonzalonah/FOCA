@@ -1,8 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
-from .models import Perfil, Emprendimiento
-from .models import Producto
+from .models import Perfil, Emprendimiento, Producto
 
 class RegistroForm(UserCreationForm):
     email = forms.EmailField(required=True)
@@ -17,17 +16,16 @@ class RegistroForm(UserCreationForm):
         user.email = self.cleaned_data['email']
         if commit:
             user.save()
-            # Crear el emprendimiento
             emp = Emprendimiento.objects.create(
                 nombre=self.cleaned_data['nombre_emprendimiento']
             )
-            # Crear el perfil con rol admin para este emprendimiento
             Perfil.objects.create(
                 user=user,
                 emprendimiento=emp,
                 rol='admin'
             )
         return user
+
 class ProductoForm(forms.ModelForm):
     class Meta:
         model = Producto

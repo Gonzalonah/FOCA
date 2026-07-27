@@ -7,9 +7,10 @@ urlpatterns = [
     path('register/', views.register, name='register'),
     path('login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
-
-    path('productos/', views.producto_list, name='producto_list'),
-    path('productos/editar/<int:pk>/', views.producto_edit, name='producto_edit'),
-    path('productos/eliminar/<int:pk>/', views.producto_delete, name='producto_delete'),
-    path('productos/nuevo/', views.producto_create, name='producto_create'),
+    
+    # Productos
+    path('productos/', views.listar_productos, name='listar_productos'),
+    path('productos/nuevo/', views.crear_producto, name='crear_producto'),
+    path('productos/editar/<int:pk>/', views.editar_producto, name='editar_producto'),
+    path('productos/eliminar/<int:pk>/', views.eliminar_producto, name='eliminar_producto'),
 ]
