@@ -18,9 +18,9 @@ def dashboard(request):
     return render(request, 'core/dashboard.html', context)
 
 
+path('productos/', views.listar_productos, name='listar_productos'),
 
 
-    
 """foca/                      # Raíz del proyecto (donde está manage.py)
 ├── foca/                  # Carpeta del proyecto
 │   ├── __init__.py

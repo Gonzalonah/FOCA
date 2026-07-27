@@ -1,21 +1,23 @@
 {% extends 'base.html' %}
-{% block title %}{{ action }} Producto{% endblock %}
+{% block title %}{{ accion }} Producto{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-6">
+    <div class="col-md-8">
         <div class="card">
-        <h2>{{ action }} Producto</h2>
-        </div>
-        <div class="card-body">
-            <form method="post">
-                {% csrf_token %}
-                {{ form.as_p }}
-                <div class="d-flex justify-content-between">
-                <button type="submit" class="btn btn-primary">Guardar</button>
-                <a href="{% url 'producto_list' %}" class="btn btn-secondary">Cancelar</a>
-                </div>
-            </form>
+            <div class="card-header">
+                <h3>{{ accion }} Producto</h3>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form.as_p }}
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'listar_productos' %}" class="btn btn-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>
