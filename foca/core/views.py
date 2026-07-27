@@ -24,6 +24,7 @@ def dashboard(request):
     emp = perfil.emprendimiento
     productos = Producto.objects.filter(emprendimiento=emp)
     caja, _ = Caja.objects.get_or_create(emprendimiento=emp)
+    productos_recientes = productos.order_by('-creado')[:5]
     context = {
         'emprendimiento': emp,
         'total_productos': productos.count(),
@@ -71,4 +72,5 @@ def eliminar_producto(request, pk):
         producto.delete()
         messages.success(request, 'Producto eliminado.')
         return redirect('listar_productos')
+    return render(request, 'core/producto_confirm_delete.html', {'producto': producto})
     return render(request, 'core/producto_confirm_delete.html', {'producto': producto})

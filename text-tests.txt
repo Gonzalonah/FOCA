@@ -1,49 +1,26 @@
-from django import forms
-from django.contrib.auth.models import User
-from django.contrib.auth.forms import UserCreationForm
-from .models import Perfil, Emprendimiento, Producto
+@login_required
+def dashboard(request):
+    perfil = request.user.perfil
+    emp = perfil.emprendimiento
+    productos = Producto.objects.filter(emprendimiento=emp)
+    caja, _ = Caja.objects.get_or_create(emprendimiento=emp)
+    
+    # Los 5 productos más recientes
+    productos_recientes = productos.order_by('-creado')[:5]
+    
+    context = {
+        'emprendimiento': emp,
+        'total_productos': productos.count(),
+        'stock_bajo': productos.filter(stock_actual__lte=F('stock_minimo')).count(),
+        'saldo_caja': caja.saldo_actual,
+        'productos_recientes': productos_recientes,
+    }
+    return render(request, 'core/dashboard.html', context)
 
-class RegistroForm(UserCreationForm):
-    email = forms.EmailField(required=True)
-    nombre_emprendimiento = forms.CharField(max_length=100, required=True, label="Nombre de tu emprendimiento")
 
-    class Meta:
-        model = User
-        fields = ['username', 'email', 'password1', 'password2']
 
-    def save(self, commit=True):
-        user = super().save(commit=False)
-        user.email = self.cleaned_data['email']
-        if commit:
-            user.save()
-            emp = Emprendimiento.objects.create(
-                nombre=self.cleaned_data['nombre_emprendimiento']
-            )
-            Perfil.objects.create(
-                user=user,
-                emprendimiento=emp,
-                rol='admin'
-            )
-        return user
 
-class ProductoForm(forms.ModelForm):
-    class Meta:
-        model = Producto
-        fields = ['nombre', 'descripcion', 'codigo_barra', 'precio_costo', 'precio_venta', 'stock_actual', 'stock_minimo']
-        widgets = {
-            'descripcion': forms.Textarea(attrs={'rows': 3}),
-            'precio_costo': forms.NumberInput(attrs={'step': '0.01'}),
-            'precio_venta': forms.NumberInput(attrs={'step': '0.01'}),
-        }
-        labels = {
-            'nombre': 'Nombre del producto',
-            'descripcion': 'Descripción',
-            'codigo_barra': 'Código de barras (opcional)',
-            'precio_costo': 'Precio de costo',
-            'precio_venta': 'Precio de venta',
-            'stock_actual': 'Stock actual',
-            'stock_minimo': 'Stock mínimo',
-        }
+    
 """foca/                      # Raíz del proyecto (donde está manage.py)
 ├── foca/                  # Carpeta del proyecto
 │   ├── __init__.py
