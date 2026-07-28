@@ -71,6 +71,7 @@ class MovimientoStock(models.Model):
     def __str__(self):
         return f"{self.producto.nombre} - {self.tipo} {self.cantidad}"
 
+
 # Cliente
 class Cliente(models.Model):
     emprendimiento = models.ForeignKey(Emprendimiento, on_delete=models.CASCADE)

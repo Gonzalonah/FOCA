@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}Movimientos de Caja{% endblock %}
+
+{% block content %}
+<h2>Movimientos de Caja</h2>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Fecha</th>
+            <th>Tipo</th>
+            <th>Monto</th>
+            <th>Descripción</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for mov in movimientos %}
+        <tr>
+            <td>{{ mov.fecha }}</td>
+            <td><span class="badge {% if mov.tipo == 'ingreso' %}bg-success{% else %}bg-danger{% endif %}">{{ mov.tipo }}</span></td>
+            <td>${{ mov.monto }}</td>
+            <td>{{ mov.descripcion }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4">No hay movimientos registrados.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+<a href="{% url 'estado_caja' %}" class="btn btn-secondary">Volver</a>
+{% endblock %}

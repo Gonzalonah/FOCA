@@ -9,8 +9,7 @@ from django.db.models import F, Sum
 from django.http import JsonResponse
 
 from .forms import RegistroForm, ProductoForm, ClienteForm, VentaForm
-from .models import Producto, Caja, Cliente, Venta, DetalleVenta, MovimientoCaja
-
+from .models import Producto, Caja, Cliente, Venta, DetalleVenta, MovimientoCaja, MovimientoStock, Emprendimiento, Perfil
 # ============================================================
 # REGISTRO
 # ============================================================
@@ -372,3 +371,100 @@ def estado_caja(request):
         'movimientos': movimientos,
     }
     return render(request, 'core/caja_estado.html', context)
+# ---------- Caja ----------
+@login_required
+def estado_caja(request):
+    """Muestra el estado actual de la caja y permite abrir/cerrar."""
+    emp = request.user.perfil.emprendimiento
+    caja, created = Caja.objects.get_or_create(emprendimiento=emp)
+    return render(request, 'core/estado_caja.html', {'caja': caja})
+
+@login_required
+def abrir_caja(request):
+    emp = request.user.perfil.emprendimiento
+    caja, created = Caja.objects.get_or_create(emprendimiento=emp)
+    
+    if caja.estado == 'abierta':
+        messages.warning(request, 'La caja ya está abierta.')
+        return redirect('estado_caja')
+    
+    if request.method == 'POST':
+        form = AbrirCajaForm(request.POST)
+        if form.is_valid():
+            saldo_inicial = form.cleaned_data['saldo_inicial']
+            caja.saldo_actual = saldo_inicial
+            caja.saldo_inicial = saldo_inicial
+            caja.estado = 'abierta'
+            caja.fecha_apertura = timezone.now()
+            caja.save()
+            # Registrar movimiento de apertura
+            MovimientoCaja.objects.create(
+                caja=caja,
+                tipo='ingreso',
+                monto=saldo_inicial,
+                descripcion='Apertura de caja'
+            )
+            messages.success(request, f'Caja abierta con ${saldo_inicial}')
+            return redirect('estado_caja')
+    else:
+        form = AbrirCajaForm()
+    
+    return render(request, 'core/abrir_caja.html', {'form': form, 'caja': caja})
+
+@login_required
+def cerrar_caja(request):
+    emp = request.user.perfil.emprendimiento
+    caja = get_object_or_404(Caja, emprendimiento=emp)
+    
+    if caja.estado != 'abierta':
+        messages.warning(request, 'La caja ya está cerrada.')
+        return redirect('estado_caja')
+    
+    if request.method == 'POST':
+        # Registrar el cierre
+        caja.estado = 'cerrada'
+        caja.fecha_cierre = timezone.now()
+        # Opcional: registrar un egreso por el retiro de efectivo (cierre)
+        # Si quieres que el saldo se reinicie a 0 al cerrar, puedes hacerlo.
+        # Pero mejor lo dejamos como está y el usuario puede hacer un arqueo.
+        caja.save()
+        messages.success(request, 'Caja cerrada correctamente.')
+        return redirect('estado_caja')
+    
+    # GET: confirmación
+    return render(request, 'core/cerrar_caja.html', {'caja': caja})
+
+@login_required
+def movimientos_caja(request):
+    emp = request.user.perfil.emprendimiento
+    caja = get_object_or_404(Caja, emprendimiento=emp)
+    movimientos = MovimientoCaja.objects.filter(caja=caja).order_by('-fecha')
+    return render(request, 'core/movimientos_caja.html', {
+        'movimientos': movimientos,
+        'caja': caja
+    })
+
+# ---------- Historial de Ventas ----------
+@login_required
+def historial_ventas(request):
+    emp = request.user.perfil.emprendimiento
+    ventas = Venta.objects.filter(emprendimiento=emp).order_by('-fecha')
+    return render(request, 'core/historial_ventas.html', {'ventas': ventas})
+
+@login_required
+def detalle_venta(request, pk):
+    emp = request.user.perfil.emprendimiento
+    venta = get_object_or_404(Venta, pk=pk, emprendimiento=emp)
+    detalles = DetalleVenta.objects.filter(venta=venta)
+    return render(request, 'core/detalle_venta.html', {
+        'venta': venta,
+        'detalles': detalles
+    })
+
+# ---------- Movimientos de Stock ----------
+@login_required
+def movimientos_stock(request):
+    emp = request.user.perfil.emprendimiento
+    movimientos = MovimientoStock.objects.filter(emprendimiento=emp).order_by('-fecha')
+    return render(request, 'core/movimientos_stock.html', {'movimientos': movimientos})
+

@@ -29,4 +29,18 @@ urlpatterns = [
     path('productos/nuevo/', views.crear_producto, name='crear_producto'),
     path('productos/editar/<int:pk>/', views.editar_producto, name='editar_producto'),
     path('productos/eliminar/<int:pk>/', views.eliminar_producto, name='eliminar_producto'),
+    # movimientos de stock
+    # Caja
+path('caja/', views.estado_caja, name='estado_caja'),
+path('caja/abrir/', views.abrir_caja, name='abrir_caja'),
+path('caja/cerrar/', views.cerrar_caja, name='cerrar_caja'),
+path('caja/movimientos/', views.movimientos_caja, name='movimientos_caja'),
+
+# Ventas - Historial
+path('ventas/historial/', views.historial_ventas, name='historial_ventas'),
+path('ventas/detalle/<int:pk>/', views.detalle_venta, name='detalle_venta'),
+
+# Inventario - Movimientos de stock
+path('stock/movimientos/', views.movimientos_stock, name='movimientos_stock'),
+
 ]
