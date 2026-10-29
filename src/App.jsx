@@ -1,704 +1,529 @@
 import React, { useState, useEffect } from 'react';
 
-// ==========================================
-// COMPONENTE PRINCIPAL (App)
-// ==========================================
+// --- CONFIGURACIÓN DE GEMINI API ---
+const GEMINI_API_KEY = ""; // Puedes colocar tu API Key de Gemini aquí o configurarla desde la UI
+
+// --- HELPER PARA DETECTAR SUBDOMINIOS ---
+const getSubdomain = () => {
+  const hostname = window.location.hostname;
+
+  // Para entorno local (ej: tecnostore.localhost:5173 o localhost)
+  if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
+    const parts = hostname.split('.');
+    if (parts.length > 1 && parts[0] !== 'localhost' && parts[0] !== '127') {
+      return parts[0];
+    }
+    return null;
+  }
+
+  // Para entorno de producción (ej: tecnostore.foca.app o github.dev)
+  const parts = hostname.split('.');
+  if (parts.length > 2) {
+    return parts[0];
+  }
+
+  return null; // Dominio principal
+};
+
+// --- BASE DE DATOS INICIAL DE EJEMPLO ---
+const INITIAL_STORES = [
+  {
+    id: 'store-1',
+    name: 'TecnoStore Argentina',
+    subdomain: 'tecnostore',
+    owner: 'Federico Gómez',
+    description: 'Gadgets de última tecnología, auriculares inalámbricos y smartwatches.',
+    logo: 'https://images.unsplash.com/photo-1526738549149-8e07eca6c147?auto=format&fit=crop&q=80&w=200',
+    banner: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&q=80&w=1200'
+  },
+  {
+    id: 'store-2',
+    name: 'FitLife Outfitters',
+    subdomain: 'fitlife',
+    owner: 'Camila Rossi',
+    description: 'Ropa deportiva de alto rendimiento y equipamiento de entrenamiento.',
+    logo: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&q=80&w=200',
+    banner: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80&w=1200'
+  }
+];
+
+const INITIAL_PRODUCTS = [
+  {
+    id: 'p1',
+    storeId: 'store-1',
+    name: 'Auriculares Pro Wireless X',
+    costPrice: 45,
+    price: 89,
+    category: 'Audio',
+    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=600',
+    description: 'Cancelación de ruido activa, 30h de batería y sonido de alta fidelidad.'
+  },
+  {
+    id: 'p2',
+    storeId: 'store-1',
+    name: 'Smartwatch Sport Fit',
+    costPrice: 30,
+    price: 65,
+    category: 'Relojes',
+    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=600',
+    description: 'Sensor de ritmo cardíaco, monitoreo de sueño y GPS integrado.'
+  },
+  {
+    id: 'p3',
+    storeId: 'store-2',
+    name: 'Mat de Yoga Pro Antideslizante',
+    costPrice: 15,
+    price: 35,
+    category: 'Equipamiento',
+    image: 'https://images.unsplash.com/photo-1601925260368-ae2f83cf8b7f?auto=format&fit=crop&q=80&w=600',
+    description: 'Material eco-friendly TPE, 6mm de espesor para máximo confort.'
+  }
+];
+
 export default function App() {
-  // --- ESTADOS GLOBALES ---
-  const [role, setRole] = useState('buyer'); // 'buyer' | 'seller'
-  const [view, setView] = useState('marketplace'); // 'marketplace' | 'storefront' | 'dashboard'
-  const [activeStoreId, setActiveStoreId] = useState(null);
-  const [selectedSellerStoreId, setSelectedSellerStoreId] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  
-  // Modales
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const [isCreateStoreOpen, setIsCreateStoreOpen] = useState(false);
-  const [isAddProductOpen, setIsAddProductOpen] = useState(false);
-
-  // Notificación
-  const [toast, setToast] = useState({ show: false, message: '', icon: 'check' });
-
-  const showToast = (message, icon = 'check') => {
-    setToast({ show: true, message, icon });
-    setTimeout(() => setToast({ show: false, message: '', icon: 'check' }), 3000);
-  };
-
-  // --- BASE DE DATOS INICIAL ---
-  const [stores, setStores] = useState([
-    {
-      id: 'store-1',
-      name: 'TecnoStore Argentina',
-      description: 'Gadgets de última tecnología, auriculares inalámbricos y smartwatchs.',
-      owner: 'Federico Gómez',
-      logo: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=150'
-    },
-    {
-      id: 'store-2',
-      name: 'Urban Streetwear',
-      description: 'Indumentaria urbana oversize, moda sustentable y diseño independiente.',
-      owner: 'Camila Ruarte',
-      logo: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=150'
-    }
-  ]);
-
-  const [products, setProducts] = useState([
-    {
-      id: 'prod-1',
-      storeId: 'store-1',
-      name: 'Auriculares Inalámbricos Pro X',
-      description: 'Cancelación de ruido activa, sonido envolvente y batería de 24 hs.',
-      price: 49990,
-      cost: 25000,
-      stock: 12,
-      image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400'
-    },
-    {
-      id: 'prod-2',
-      storeId: 'store-1',
-      name: 'Smartwatch Deportivo Series 7',
-      description: 'Monitoreo de frecuencia cardíaca, GPS integrado e IP68.',
-      price: 78500,
-      cost: 40000,
-      stock: 5,
-      image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400'
-    },
-    {
-      id: 'prod-3',
-      storeId: 'store-2',
-      name: 'Remera Oversize Algodón Premium',
-      description: '100% algodón peinado. Estilo urbano relajado.',
-      price: 19500,
-      cost: 8000,
-      stock: 20,
-      image: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=400'
-    }
-  ]);
-
+  // --- ESTADOS DE LA APLICACIÓN ---
+  const [activeSubdomain, setActiveSubdomain] = useState(null);
+  const [currentView, setCurrentView] = useState('marketplace'); // 'marketplace', 'storefront', 'seller'
+  const [stores, setStores] = useState(INITIAL_STORES);
+  const [products, setProducts] = useState(INITIAL_PRODUCTS);
+  const [selectedStore, setSelectedStore] = useState(INITIAL_STORES[0]);
   const [cart, setCart] = useState([]);
-  const [orders, setOrders] = useState([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
+  // --- ESTADOS DEL ASISTENTE DE IA ---
+  const [apiKey, setApiKey] = useState(GEMINI_API_KEY);
+  const [aiProductCost, setAiProductCost] = useState('');
+  const [aiProductCategory, setAiProductCategory] = useState('Tecnología');
+  const [aiDesiredMargin, setAiDesiredMargin] = useState(40);
+  const [aiPricingResult, setAiPricingResult] = useState('');
+  const [aiVariantsResult, setAiVariantsResult] = useState('');
+  const [isLoadingPricing, setIsLoadingPricing] = useState(false);
+  const [isLoadingVariants, setIsLoadingVariants] = useState(false);
+
+  // --- DETECCION INICIAL DE SUBDOMINIO ---
   useEffect(() => {
-    if (stores.length > 0 && !selectedSellerStoreId) {
-      setSelectedSellerStoreId(stores[0].id);
-    }
-  }, [stores]);
-
-  // --- LÓGICA DEL CARRITO ---
-  const addToCart = (product, store) => {
-    setCart(prev => {
-      const existing = prev.find(i => i.product.id === product.id);
-      if (existing) {
-        return prev.map(i => i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i);
+    const subdomain = getSubdomain();
+    if (subdomain) {
+      setActiveSubdomain(subdomain);
+      const matchedStore = stores.find(s => s.subdomain === subdomain);
+      if (matchedStore) {
+        setSelectedStore(matchedStore);
+        setCurrentView('storefront');
       }
-      return [...prev, { product, store, quantity: 1 }];
+    }
+  }, []);
+
+  // --- FUNCIONES DEL CARRITO ---
+  const addToCart = (product) => {
+    setCart(prev => {
+      const existing = prev.find(item => item.id === product.id);
+      if (existing) {
+        return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
+      }
+      return [...prev, { ...product, quantity: 1 }];
     });
-    showToast('Producto agregado al carrito', 'shopping-bag');
+    setIsCartOpen(true);
   };
 
-  const removeFromCart = (index) => {
-    setCart(prev => prev.filter((_, i) => i !== index));
+  const removeFromCart = (productId) => {
+    setCart(prev => prev.filter(item => item.id !== productId));
   };
 
-  const cartTotal = cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
-  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-  // --- LÓGICA DE TIENDAS Y PRODUCTOS ---
-  const handleCreateStore = (storeData) => {
-    const newStore = { id: `store-${Date.now()}`, ...storeData };
-    setStores(prev => [...prev, newStore]);
-    setSelectedSellerStoreId(newStore.id);
-    setIsCreateStoreOpen(false);
-    showToast('¡Nueva tienda creada con éxito!', 'store');
-  };
-
-  const handleAddProduct = (prodData) => {
-    const newProd = { id: `prod-${Date.now()}`, storeId: selectedSellerStoreId, ...prodData };
-    setProducts(prev => [...prev, newProd]);
-    setIsAddProductOpen(false);
-    showToast('Producto agregado al catálogo', 'box');
-  };
-
-  const handleDeleteProduct = (id) => {
-    setProducts(prev => prev.filter(p => p.id !== id));
-    showToast('Producto eliminado', 'trash');
-  };
-
-  const handleCheckout = (customerData) => {
-    if (cart.length === 0) return;
-    
-    // Generar un pedido agrupado por tienda
-    const newOrders = [];
-    const grouped = {};
-    cart.forEach(item => {
-      if (!grouped[item.store.id]) grouped[item.store.id] = { items: [], total: 0 };
-      grouped[item.store.id].items.push({ name: item.product.name, qty: item.quantity, price: item.product.price });
-      grouped[item.store.id].total += item.product.price * item.quantity;
+  // --- INTEGRACIÓN CON GEMINI IA API ---
+  const callGeminiAPI = async (prompt) => {
+    if (!apiKey) {
+      throw new Error('Por favor, ingresa tu API Key de Gemini para usar la IA.');
+    }
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }]
+      })
     });
-
-    Object.keys(grouped).forEach(sId => {
-      newOrders.push({
-        id: Math.floor(100000 + Math.random() * 900000),
-        storeId: sId,
-        customer: customerData,
-        items: grouped[sId].items,
-        total: grouped[sId].total,
-        status: 'Pendiente de Despacho',
-        date: new Date().toLocaleDateString()
-      });
-    });
-
-    setOrders(prev => [...prev, ...newOrders]);
-    setCart([]);
-    setIsCartOpen(false);
-    showToast('¡Compra realizada con éxito!', 'check-circle');
+    const data = await response.json();
+    if (data.error) throw new Error(data.error.message);
+    return data.candidates[0].content.parts[0].text;
   };
 
-  const currentStore = stores.find(s => s.id === activeStoreId);
+  // 1. Recomendador de Precio Sugerido
+  const handleCalculatePriceWithAI = async () => {
+    if (!aiProductCost) return alert('Por favor ingresa el costo del producto.');
+    setIsLoadingPricing(true);
+    setAiPricingResult('');
+    try {
+      const prompt = `Actúa como un experto en fijación de precios y e-commerce para retail.
+Tengo un producto en la categoría "${aiProductCategory}" con un costo de fabricación/compra de $${aiProductCost} USD.
+Mi margen objetivo deseado es del ${aiDesiredMargin}%.
+
+Por favor responde brevemente con:
+1. Precio de venta sugerido recomendado ($ USD).
+2. Estrategia de precio psicológico (ej: terminado en .99 o .90).
+3. Precio en oferta/descuento recomendado.
+4. Breve justificación estratégica en 2 oraciones.`;
+
+      const responseText = await callGeminiAPI(prompt);
+      setAiPricingResult(responseText);
+    } catch (err) {
+      alert(`Error al consultar IA: ${err.message}`);
+    } finally {
+      setIsLoadingPricing(false);
+    }
+  };
+
+  // 2. Recomendador de Variantes y Productos
+  const handlePredictVariantsWithAI = async () => {
+    setIsLoadingVariants(true);
+    setAiVariantsResult('');
+    try {
+      const storeProducts = products.filter(p => p.storeId === selectedStore.id);
+      const productListText = storeProducts.map(p => `- ${p.name} ($${p.price}) [Categoría: ${p.category}]`).join('\n');
+
+      const prompt = `Actúa como un consultor estratégico de inventario para la tienda "${selectedStore.name}".
+Actualmente la tienda vende los siguientes productos en su catálogo:
+${productListText}
+
+Con base en estos productos en la base de datos:
+1. Recomienda 3 posibles variantes (colores, tamaños, accesorios o bundles) para los productos existentes.
+2. Sugiere 2 nuevos productos complementarios que deberían agregar al catálogo para incrementar el ticket promedio.`;
+
+      const responseText = await callGeminiAPI(prompt);
+      setAiVariantsResult(responseText);
+    } catch (err) {
+      alert(`Error al consultar IA: ${err.message}`);
+    } finally {
+      setIsLoadingVariants(false);
+    }
+  };
+
+  // --- FILTRADO DE TIENDAS Y PRODUCTOS ---
+  const filteredStores = stores.filter(s => 
+    s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    s.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const activeStoreProducts = products.filter(p => p.storeId === selectedStore.id);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans flex flex-col justify-between">
+    <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
       
-      {/* BARRA NAVEGACIÓN */}
-      <Header 
-        role={role} 
-        setRole={setRole} 
-        view={view} 
-        setView={setView} 
-        cartCount={cartCount} 
-        openCart={() => setIsCartOpen(true)}
-        goHome={() => { setView('marketplace'); setActiveStoreId(null); }}
-      />
+      {/* NAVEGACIÓN PRINCIPAL */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center space-x-3 cursor-pointer" onClick={() => { setCurrentView('marketplace'); setActiveSubdomain(null); }}>
+            <div className="bg-indigo-600 text-white p-2 rounded-xl text-xl shadow-md">🦭</div>
+            <div>
+              <span className="font-extrabold text-xl tracking-tight text-gray-900">FOCA<span className="text-indigo-600">.app</span></span>
+              {activeSubdomain && (
+                <span className="ml-2 px-2 py-0.5 text-xs font-semibold bg-indigo-100 text-indigo-800 rounded-full">
+                  {activeSubdomain}.foca.app
+                </span>
+              )}
+            </div>
+          </div>
 
-      {/* NOTIFICACIÓN TOAST */}
-      {toast.show && (
-        <div className="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl border border-slate-700 flex items-center space-x-3 transition">
-          <span className="text-indigo-400 font-bold">✓</span>
-          <span className="text-xs font-semibold">{toast.message}</span>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setCurrentView('marketplace')}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition ${currentView === 'marketplace' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-600 hover:text-gray-900'}`}
+            >
+              🏪 Marketplace
+            </button>
+            <button
+              onClick={() => setCurrentView('seller')}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition ${currentView === 'seller' ? 'bg-indigo-600 text-white shadow' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+            >
+              💼 Mi Tienda / Panel
+            </button>
+            <button
+              onClick={() => setIsCartOpen(true)}
+              className="relative p-2 text-gray-600 hover:text-indigo-600 transition"
+            >
+              🛒 <span className="sr-only">Carrito</span>
+              {cart.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-indigo-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center shadow">
+                  {cart.reduce((total, item) => total + item.quantity, 0)}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
-      )}
+      </header>
 
-      {/* CONTENIDO PRINCIPAL */}
-      <main className="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        {/* VISTA 1: MARKETPLACE */}
-        {view === 'marketplace' && role === 'buyer' && (
-          <MarketplaceView 
-            stores={stores} 
-            searchQuery={searchQuery} 
-            setSearchQuery={setSearchQuery} 
-            onOpenStore={(id) => { setActiveStoreId(id); setView('storefront'); }}
-            onCreateStoreClick={() => { setRole('seller'); setView('dashboard'); setIsCreateStoreOpen(true); }}
-          />
+      {/* CONTENIDO PRINCIPAL SEGÚN VISTA */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        {/* VISTA 1: MARKETPLACE CENTRAL (foca.app) */}
+        {currentView === 'marketplace' && (
+          <div className="space-y-8">
+            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-3xl p-8 sm:p-12 text-white shadow-xl">
+              <h1 className="text-3xl sm:text-5xl font-black mb-4">Crea tu tienda online con tu propio subdominio</h1>
+              <p className="text-indigo-100 text-lg max-w-2xl mb-8">
+                El ecosistema multitienda donde cada emprendedor gestiona sus productos, precios optimizados con IA y su marca única.
+              </p>
+              <div className="max-w-md">
+                <input
+                  type="text"
+                  placeholder="Buscar tiendas o marcas..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full px-5 py-3 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-white shadow-lg"
+                />
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Tiendas Destacadas</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredStores.map(store => (
+                  <div key={store.id} className="bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition flex flex-col">
+                    <img src={store.banner} alt={store.name} className="h-32 w-full object-cover" />
+                    <div className="p-6 flex-1 flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center space-x-3 mb-3">
+                          <img src={store.logo} alt={store.name} className="w-10 h-10 rounded-full object-cover border" />
+                          <div>
+                            <h3 className="font-bold text-gray-900">{store.name}</h3>
+                            <span className="text-xs text-indigo-600 font-mono">{store.subdomain}.foca.app</span>
+                          </div>
+                        </div>
+                        <p className="text-gray-600 text-sm mb-4 line-clamp-2">{store.description}</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setSelectedStore(store);
+                          setCurrentView('storefront');
+                        }}
+                        className="w-full py-2.5 px-4 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-indigo-600 transition shadow"
+                      >
+                        Visitar Tienda →
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         )}
 
-        {/* VISTA 2: VITRINA DE TIENDA ESPECÍFICA (STOREFRONT) */}
-        {view === 'storefront' && currentStore && (
-          <StorefrontView 
-            store={currentStore} 
-            products={products.filter(p => p.storeId === currentStore.id)} 
-            onBack={() => setView('marketplace')} 
-            onAddToCart={(p) => addToCart(p, currentStore)}
-          />
+        {/* VISTA 2: VITRINA / STOREFRONT INDIVIDUAL DE UNA TIENDA */}
+        {currentView === 'storefront' && selectedStore && (
+          <div className="space-y-8">
+            <div className="relative rounded-3xl overflow-hidden bg-gray-900 text-white h-64 shadow-lg">
+              <img src={selectedStore.banner} alt={selectedStore.name} className="absolute inset-0 w-full h-full object-cover opacity-40" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-8">
+                <div className="flex items-center space-x-4">
+                  <img src={selectedStore.logo} alt={selectedStore.name} className="w-16 h-16 rounded-2xl object-cover border-2 border-white shadow" />
+                  <div>
+                    <h1 className="text-3xl font-bold">{selectedStore.name}</h1>
+                    <p className="text-gray-300 text-sm">{selectedStore.description}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-gray-900">Catálogo de Productos</h2>
+              <button onClick={() => setCurrentView('marketplace')} className="text-sm font-medium text-indigo-600 hover:text-indigo-800">
+                ← Volver al Marketplace
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {activeStoreProducts.map(product => (
+                <div key={product.id} className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col">
+                  <img src={product.image} alt={product.name} className="h-48 w-full object-cover" />
+                  <div className="p-5 flex-1 flex flex-col justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-indigo-600 tracking-wider uppercase">{product.category}</span>
+                      <h3 className="font-bold text-gray-900 text-lg mt-1">{product.name}</h3>
+                      <p className="text-gray-500 text-sm mt-2 line-clamp-2">{product.description}</p>
+                    </div>
+                    <div className="mt-6 flex items-center justify-between">
+                      <span className="text-2xl font-black text-gray-900">${product.price}</span>
+                      <button
+                        onClick={() => addToCart(product)}
+                        className="px-4 py-2 bg-indigo-600 text-white font-semibold text-sm rounded-xl hover:bg-indigo-700 transition shadow"
+                      >
+                        + Agregar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
-        {/* VISTA 3: PANEL DE VENDEDOR (DASHBOARD) */}
-        {view === 'dashboard' && role === 'seller' && (
-          <SellerDashboard 
-            stores={stores} 
-            selectedStoreId={selectedSellerStoreId} 
-            setSelectedStoreId={setSelectedSellerStoreId}
-            products={products.filter(p => p.storeId === selectedSellerStoreId)}
-            orders={orders.filter(o => o.storeId === selectedSellerStoreId)}
-            onOpenCreateStore={() => setIsCreateStoreOpen(true)}
-            onOpenAddProduct={() => setIsAddProductOpen(true)}
-            onDeleteProduct={handleDeleteProduct}
-          />
+        {/* VISTA 3: PANEL DE CONTROL DEL VENDEDOR + ASISTENTE IA */}
+        {currentView === 'seller' && (
+          <div className="space-y-8">
+            <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Panel de Control del Vendedor</h1>
+                <p className="text-gray-500 text-sm">Gestiona la tienda: <strong className="text-indigo-600">{selectedStore.name}</strong> ({selectedStore.subdomain}.foca.app)</p>
+              </div>
+              <select
+                value={selectedStore.id}
+                onChange={(e) => setSelectedStore(stores.find(s => s.id === e.target.value))}
+                className="px-4 py-2 border border-gray-300 rounded-xl bg-gray-50 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+
+            {/* SECCIÓN IA GEMINI */}
+            <div className="bg-gradient-to-br from-indigo-900 via-indigo-800 to-purple-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl space-y-6">
+              <div className="flex items-center space-x-3 border-b border-indigo-700/50 pb-4">
+                <span className="text-3xl">🤖</span>
+                <div>
+                  <h2 className="text-xl font-bold">Asistente Inteligente FOCA IA (Gemini)</h2>
+                  <p className="text-indigo-200 text-xs">Optimización de precios y predicción de catálogo para tu tienda</p>
+                </div>
+              </div>
+
+              {/* API Key input */}
+              <div className="bg-indigo-950/60 p-4 rounded-2xl border border-indigo-700/40">
+                <label className="block text-xs font-semibold text-indigo-300 mb-1">Clave API de Gemini</label>
+                <input
+                  type="password"
+                  placeholder="Ingresa tu GEMINI_API_KEY..."
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  className="w-full px-3 py-2 bg-indigo-900/80 border border-indigo-600/50 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                {/* Herramienta 1: Calculadora de Precio Sugerido */}
+                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/10 flex flex-col justify-between">
+                  <div className="space-y-4">
+                    <h3 className="font-bold text-lg text-white flex items-center space-x-2">
+                      <span>🏷️</span> <span>Recomendador de Precio de Venta</span>
+                    </h3>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-medium text-indigo-200">Costo del producto ($ USD)</label>
+                        <input
+                          type="number"
+                          placeholder="Ej: 40"
+                          value={aiProductCost}
+                          onChange={(e) => setAiProductCost(e.target.value)}
+                          className="w-full px-3 py-2 bg-white text-gray-900 rounded-xl text-sm mt-1 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-indigo-200">Margen deseado (%)</label>
+                        <input
+                          type="number"
+                          value={aiDesiredMargin}
+                          onChange={(e) => setAiDesiredMargin(e.target.value)}
+                          className="w-full px-3 py-2 bg-white text-gray-900 rounded-xl text-sm mt-1 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleCalculatePriceWithAI}
+                    disabled={isLoadingPricing}
+                    className="mt-6 w-full py-2.5 bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-sm rounded-xl transition shadow disabled:opacity-50"
+                  >
+                    {isLoadingPricing ? 'Procesando con IA...' : 'Calcular Precio Optimo'}
+                  </button>
+
+                  {aiPricingResult && (
+                    <div className="mt-4 p-4 bg-indigo-950/80 rounded-xl text-xs leading-relaxed text-indigo-100 whitespace-pre-line border border-indigo-500/30">
+                      {aiPricingResult}
+                    </div>
+                  )}
+                </div>
+
+                {/* Herramienta 2: Predicción de Variantes por BDD */}
+                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/10 flex flex-col justify-between">
+                  <div className="space-y-4">
+                    <h3 className="font-bold text-lg text-white flex items-center space-x-2">
+                      <span>📊</span> <span>Predicción de Variantes e Inventario</span>
+                    </h3>
+                    <p className="text-xs text-indigo-200">
+                      La IA analizará los productos actuales almacenados en la base de datos de <strong>{selectedStore.name}</strong> para sugerirte expansiones estratégicas.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handlePredictVariantsWithAI}
+                    disabled={isLoadingVariants}
+                    className="mt-6 w-full py-2.5 bg-purple-500 hover:bg-purple-400 text-white font-bold text-sm rounded-xl transition shadow disabled:opacity-50"
+                  >
+                    {isLoadingVariants ? 'Analizando BDD...' : 'Analizar Inventario con IA'}
+                  </button>
+
+                  {aiVariantsResult && (
+                    <div className="mt-4 p-4 bg-indigo-950/80 rounded-xl text-xs leading-relaxed text-indigo-100 whitespace-pre-line border border-purple-500/30">
+                      {aiVariantsResult}
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            </div>
+          </div>
         )}
 
       </main>
 
-      {/* MODALES */}
-      <CartModal 
-        isOpen={isCartOpen} 
-        onClose={() => setIsCartOpen(false)} 
-        cart={cart} 
-        total={cartTotal} 
-        onRemove={removeFromCart} 
-        onCheckout={handleCheckout} 
-      />
-
-      <CreateStoreModal 
-        isOpen={isCreateStoreOpen} 
-        onClose={() => setIsCreateStoreOpen(false)} 
-        onCreate={handleCreateStore} 
-      />
-
-      <AddProductModal 
-        isOpen={isAddProductOpen} 
-        onClose={() => setIsAddProductOpen(false)} 
-        onAdd={handleAddProduct} 
-      />
-
-      {/* FOOTER */}
-      <footer className="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500">
-        <p>© 2026 FOCA - Plataforma Multitienda E-Commerce impulsada por IA.</p>
-      </footer>
-    </div>
-  );
-}
-
-// ==========================================
-// COMPONENTE: HEADER / NAVEGACIÓN
-// ==========================================
-function Header({ role, setRole, view, setView, cartCount, openCart, goHome }) {
-  return (
-    <header className="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        <div className="flex items-center space-x-3 cursor-pointer" onClick={goHome}>
-          <div className="bg-indigo-600 p-2 rounded-xl text-white font-extrabold text-lg flex items-center justify-center">
-            🦭
-          </div>
-          <div>
-            <span className="text-lg font-bold tracking-tight">FOCA<span className="text-indigo-400">.app</span></span>
-            <span className="block text-[10px] text-slate-400 uppercase tracking-widest font-semibold">E-Commerce Multitienda</span>
-          </div>
-        </div>
-
-        {/* SELECTOR DE ROL */}
-        <div className="flex bg-slate-800 p-1 rounded-xl border border-slate-700 text-xs font-semibold">
-          <button 
-            onClick={() => { setRole('buyer'); if (view === 'dashboard') setView('marketplace'); }}
-            className={`px-3 py-1.5 rounded-lg transition ${role === 'buyer' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
-          >
-            🛒 Comprador
-          </button>
-          <button 
-            onClick={() => { setRole('seller'); setView('dashboard'); }}
-            className={`px-3 py-1.5 rounded-lg transition ${role === 'seller' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
-          >
-            🏪 Vendedor
-          </button>
-        </div>
-
-        {/* BOTÓN CARRITO */}
-        <button onClick={openCart} className="relative bg-slate-800 hover:bg-slate-700 p-2.5 rounded-xl border border-slate-700 text-xs font-semibold flex items-center space-x-2 transition">
-          <span>🛒</span>
-          <span className="hidden sm:inline">Carrito</span>
-          {cartCount > 0 && (
-            <span className="bg-indigo-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{cartCount}</span>
-          )}
-        </button>
-      </div>
-    </header>
-  );
-}
-
-// ==========================================
-// COMPONENTE: MARKETPLACE
-// ==========================================
-function MarketplaceView({ stores, searchQuery, setSearchQuery, onOpenStore, onCreateStoreClick }) {
-  const filtered = stores.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.description.toLowerCase().includes(searchQuery.toLowerCase()));
-
-  return (
-    <div>
-      {/* HERO BANNER */}
-      <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-purple-900 rounded-3xl p-8 md:p-12 text-white shadow-xl mb-10 relative overflow-hidden">
-        <div className="max-w-2xl relative z-10">
-          <span className="bg-indigo-500/30 text-indigo-200 text-xs font-bold px-3 py-1 rounded-full uppercase border border-indigo-400/30">Plataforma Multitienda</span>
-          <h1 className="text-3xl md:text-5xl font-black mt-3 mb-4 tracking-tight">Crea tu tienda online o explora marcas únicas</h1>
-          <p className="text-indigo-100 text-sm md:text-base mb-6">El ecosistema de comercio electrónico que conecta marcas independientes con compradores en todo el país.</p>
-          <div className="flex gap-3">
-            <a href="#tiendas" className="bg-white text-indigo-900 font-bold px-5 py-2.5 rounded-xl text-xs hover:bg-indigo-50 transition">Ver Tiendas</a>
-            <button onClick={onCreateStoreClick} className="bg-indigo-600/60 hover:bg-indigo-600 border border-indigo-400/40 text-white font-bold px-5 py-2.5 rounded-xl text-xs transition">Crear mi Tienda Gratis</button>
-          </div>
-        </div>
-      </div>
-
-      {/* BUSCADOR */}
-      <div id="tiendas" className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900">Tiendas Oficiales</h2>
-          <p className="text-xs text-slate-500">Haz clic para entrar al catálogo exclusivo de cada vendedor</p>
-        </div>
-        <input 
-          type="text" 
-          placeholder="Buscar tienda o marca..." 
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full sm:w-72 bg-white border border-slate-200 px-4 py-2 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
-        />
-      </div>
-
-      {/* LISTADO DE TIENDAS */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filtered.map(store => (
-          <div key={store.id} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition flex flex-col justify-between">
-            <div>
-              <div className="h-24 bg-gradient-to-r from-slate-800 to-indigo-900 relative p-4 flex items-end">
-                <div className="w-14 h-14 bg-white rounded-xl shadow border-2 border-white absolute -bottom-4 left-4 overflow-hidden flex items-center justify-center font-bold text-indigo-600 text-lg">
-                  {store.logo ? <img src={store.logo} alt="Logo" className="w-full h-full object-cover"/> : store.name.charAt(0)}
-                </div>
-              </div>
-              <div className="pt-6 p-5">
-                <h3 className="font-bold text-slate-900 text-base">{store.name}</h3>
-                <p className="text-xs text-slate-500 mt-1 line-clamp-2">{store.description}</p>
-                <span className="text-[11px] text-slate-400 mt-3 block">Dueño: <strong className="text-slate-600">{store.owner}</strong></span>
-              </div>
+      {/* MODAL DEL CARRITO DE COMPRAS */}
+      {isCartOpen && (
+        <div className="fixed inset-0 z-50 overflow-hidden bg-black/50 backdrop-blur-sm flex justify-end">
+          <div className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col p-6 space-y-6">
+            <div className="flex justify-between items-center border-b pb-4">
+              <h2 className="text-xl font-bold text-gray-900">Carrito de Compras</h2>
+              <button onClick={() => setIsCartOpen(false)} className="text-gray-400 hover:text-gray-600 text-2xl font-bold">×</button>
             </div>
-            <div className="p-5 pt-0">
-              <button onClick={() => onOpenStore(store.id)} className="w-full bg-slate-100 hover:bg-indigo-600 hover:text-white text-slate-700 text-xs font-bold py-2.5 rounded-xl transition">
-                Visitar Tienda →
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
-// ==========================================
-// COMPONENTE: STOREFRONT (VITRINA DE TIENDA)
-// ==========================================
-function StorefrontView({ store, products, onBack, onAddToCart }) {
-  return (
-    <div>
-      <button onClick={onBack} className="mb-6 inline-flex items-center space-x-2 text-xs font-bold text-slate-600 hover:text-indigo-600 bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-sm transition">
-        ← Volver al Marketplace
-      </button>
-
-      <div className="bg-white rounded-3xl border border-slate-200 p-6 md:p-8 mb-8 flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6 shadow-sm">
-        <div className="w-20 h-20 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-2xl font-bold text-indigo-600 overflow-hidden flex-shrink-0">
-          {store.logo ? <img src={store.logo} className="w-full h-full object-cover" /> : store.name.charAt(0)}
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">{store.name}</h1>
-          <p className="text-slate-600 text-xs mt-1">{store.description}</p>
-          <div className="mt-3 flex items-center space-x-3 text-[11px] text-slate-400 font-semibold">
-            <span>📦 {products.length} Productos</span>
-            <span>🛡️ Compra Garantizada</span>
-          </div>
-        </div>
-      </div>
-
-      <h2 className="text-lg font-bold text-slate-900 mb-4">Catálogo de Productos</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {products.map(product => (
-          <div key={product.id} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex flex-col justify-between">
-            <div>
-              <div className="h-44 bg-slate-100">
-                <img src={product.image} className="w-full h-full object-cover" />
-              </div>
-              <div className="p-4">
-                <h3 className="font-bold text-slate-900 text-xs line-clamp-1">{product.name}</h3>
-                <p className="text-[11px] text-slate-500 mt-1 line-clamp-2">{product.description}</p>
-                <div className="mt-3 text-base font-extrabold text-indigo-600">
-                  ${product.price.toLocaleString()}
-                </div>
-              </div>
-            </div>
-            <div className="p-4 pt-0">
-              <button onClick={() => onAddToCart(product)} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2 rounded-xl transition shadow">
-                + Agregar al Carrito
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ==========================================
-// COMPONENTE: DASHBOARD DE VENDEDOR & IA
-// ==========================================
-function SellerDashboard({ stores, selectedStoreId, setSelectedStoreId, products, orders, onOpenCreateStore, onOpenAddProduct, onDeleteProduct }) {
-  const [tab, setTab] = useState('products'); // 'products' | 'orders' | 'ai'
-
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Panel de Administración de Vendedor</h1>
-          <p className="text-xs text-slate-500">Gestiona tu tienda online y consulta al Asistente IA</p>
-        </div>
-        <button onClick={onOpenCreateStore} className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow transition">
-          + Crear Nueva Tienda
-        </button>
-      </div>
-
-      {/* SELECTOR DE TIENDA */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 mb-6 flex items-center space-x-3">
-        <span className="text-xs font-bold text-slate-600 uppercase">Tienda Activa:</span>
-        <select value={selectedStoreId || ''} onChange={(e) => setSelectedStoreId(e.target.value)} className="bg-slate-50 border border-slate-200 text-xs rounded-xl px-3 py-1.5 font-semibold focus:outline-none">
-          {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </select>
-      </div>
-
-      {/* PESTAÑAS */}
-      <div className="flex space-x-2 border-b border-slate-200 mb-6">
-        <button onClick={() => setTab('products')} className={`pb-3 px-4 border-b-2 font-bold text-xs transition ${tab === 'products' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500'}`}>📦 Productos ({products.length})</button>
-        <button onClick={() => setTab('orders')} className={`pb-3 px-4 border-b-2 font-bold text-xs transition ${tab === 'orders' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500'}`}>📋 Pedidos Recibidos ({orders.length})</button>
-        <button onClick={() => setTab('ai')} className={`pb-3 px-4 border-b-2 font-bold text-xs transition relative ${tab === 'ai' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500'}`}>
-          ✨ Asistente IA (Gemini)
-          <span className="ml-1 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">NUEVO</span>
-        </button>
-      </div>
-
-      {/* CONTENIDO PESTAÑAS */}
-      {tab === 'products' && (
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-base font-bold text-slate-900">Productos en Catálogo</h2>
-            <button onClick={onOpenAddProduct} className="bg-indigo-600 text-white text-xs font-bold px-3 py-2 rounded-xl shadow hover:bg-indigo-700 transition">+ Nuevo Producto</button>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {products.map(p => (
-              <div key={p.id} className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
-                <div>
-                  <img src={p.image} className="w-full h-32 object-cover rounded-xl mb-3" />
-                  <h3 className="font-bold text-xs text-slate-900">{p.name}</h3>
-                  <div className="mt-2 flex justify-between text-xs font-semibold">
-                    <span className="text-indigo-600">${p.price.toLocaleString()}</span>
-                    <span className="text-slate-400">Stock: {p.stock}</span>
+            <div className="flex-1 overflow-y-auto space-y-4">
+              {cart.length === 0 ? (
+                <p className="text-gray-500 text-center py-12">El carrito está vacío.</p>
+              ) : (
+                cart.map(item => (
+                  <div key={item.id} className="flex justify-between items-center border-b pb-3">
+                    <div>
+                      <h4 className="font-bold text-gray-900 text-sm">{item.name}</h4>
+                      <p className="text-xs text-gray-500">${item.price} x {item.quantity}</p>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <span className="font-bold text-gray-900">${item.price * item.quantity}</span>
+                      <button onClick={() => removeFromCart(item.id)} className="text-red-500 hover:text-red-700 text-xs font-bold">Quitar</button>
+                    </div>
                   </div>
+                ))
+              )}
+            </div>
+
+            {cart.length > 0 && (
+              <div className="border-t pt-4 space-y-4">
+                <div className="flex justify-between text-lg font-black text-gray-900">
+                  <span>Total:</span>
+                  <span>${cartTotal}</span>
                 </div>
-                <button onClick={() => onDeleteProduct(p.id)} className="mt-3 w-full bg-red-50 hover:bg-red-100 text-red-600 text-[11px] font-bold py-1.5 rounded-lg transition">Eliminar</button>
+                <button
+                  onClick={() => alert('¡Gracias por tu compra de prueba en FOCA!')}
+                  className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition shadow-lg"
+                >
+                  Finalizar Compra
+                </button>
               </div>
-            ))}
+            )}
           </div>
         </div>
       )}
 
-      {tab === 'orders' && (
-        <div className="space-y-4">
-          {orders.map(o => (
-            <div key={o.id} className="bg-white p-5 rounded-2xl border border-slate-200 flex justify-between items-center">
-              <div>
-                <span className="font-bold text-xs text-slate-900">Pedido #{o.id}</span>
-                <p className="text-[11px] text-slate-500 mt-0.5">Cliente: {o.customer.name} ({o.customer.email})</p>
-                <div className="mt-2 flex gap-1">
-                  {o.items.map((it, idx) => (
-                    <span key={idx} className="bg-slate-100 text-[10px] px-2 py-0.5 rounded font-semibold text-slate-600">{it.name} (x{it.qty})</span>
-                  ))}
-                </div>
-              </div>
-              <div className="text-right">
-                <span className="text-base font-extrabold text-indigo-600">${o.total.toLocaleString()}</span>
-                <span className="block text-[10px] bg-amber-50 text-amber-700 font-bold px-2 py-0.5 rounded-full mt-1 border border-amber-200">{o.status}</span>
-              </div>
-            </div>
-          ))}
-          {orders.length === 0 && <p className="text-center py-10 text-xs text-slate-400">No hay pedidos registrados en esta tienda.</p>}
-        </div>
-      )}
-
-      {tab === 'ai' && <AIAssistantModule products={products} storeName={stores.find(s=>s.id === selectedStoreId)?.name} />}
-    </div>
-  );
-}
-
-// ==========================================
-// COMPONENTE: ASISTENTE DE IA (GEMINI API)
-// ==========================================
-function AIAssistantModule({ products, storeName }) {
-  const [mode, setMode] = useState('pricing'); // 'pricing' | 'variants'
-  const [cost, setCost] = useState('');
-  const [margin, setMargin] = useState(40);
-  const [productName, setProductName] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [aiResponse, setAiResponse] = useState('');
-
-  const callGemini = async (prompt) => {
-    setLoading(true);
-    setAiResponse('');
-    const apiKey = ""; // Runtime key
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
-
-    try {
-      const res = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          systemInstruction: { parts: [{ text: "Eres un consultor experto en e-commerce y precios para tiendas online." }] }
-        })
-      });
-      const data = await res.json();
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "No se pudo obtener la respuesta de la IA.";
-      setAiResponse(text);
-    } catch (err) {
-      setAiResponse("Ocurrió un error de conexión con la IA de Gemini.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePricing = () => {
-    if (!cost) return;
-    const prompt = `Calcula el precio recomendado de venta para el producto "${productName || 'Producto General'}":
-    - Costo de producción/compra: $${cost}
-    - Margen de ganancia objetivo: ${margin}%
-    
-    Proporciona:
-    1. Precio sugerido de venta.
-    2. Precio recomendado para oferta/descuento.
-    3. Consejo de precios psicológicos.`;
-    callGemini(prompt);
-  };
-
-  const handleVariants = () => {
-    const prompt = `Analiza este inventario de la tienda "${storeName}":
-    ${JSON.stringify(products.map(p => ({ nombre: p.name, precio: p.price })))}
-    
-    Recomienda 3 variantes de producto (colores, talles, bundles o combinaciones) para expandir el catálogo y aumentar las ventas.`;
-    callGemini(prompt);
-  };
-
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div className="bg-slate-900 text-white p-6 rounded-3xl border border-slate-800 space-y-4">
-        <h3 className="font-bold text-base flex items-center space-x-2">
-          <span>✨</span>
-          <span>IA Asesora de Comercio</span>
-        </h3>
-        <p className="text-xs text-slate-300">Aprovecha el poder del modelo Gemini 3 Flash para optimizar los ingresos de tu tienda.</p>
-        <div className="space-y-2 pt-2">
-          <button onClick={() => setMode('pricing')} className={`w-full text-left p-3 rounded-xl text-xs font-semibold border transition ${mode === 'pricing' ? 'bg-indigo-600 border-indigo-400 text-white' : 'border-slate-700 text-slate-300'}`}>
-            🧮 Calculadora de Precios
-          </button>
-          <button onClick={() => setMode('variants')} className={`w-full text-left p-3 rounded-xl text-xs font-semibold border transition ${mode === 'variants' ? 'bg-indigo-600 border-indigo-400 text-white' : 'border-slate-700 text-slate-300'}`}>
-            💡 Predicción de Variantes
-          </button>
-        </div>
-      </div>
-
-      <div className="md:col-span-2 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
-        {mode === 'pricing' && (
-          <div className="space-y-3">
-            <h4 className="font-bold text-sm text-slate-900">Optimización de Precio de Venta</h4>
-            <div className="grid grid-cols-2 gap-3">
-              <input type="text" placeholder="Nombre Producto" value={productName} onChange={(e) => setProductName(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs" />
-              <input type="number" placeholder="Costo ($)" value={cost} onChange={(e) => setCost(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs" />
-            </div>
-            <div>
-              <label className="text-[11px] font-bold text-slate-600 block mb-1">Margen Objetivo (%): {margin}%</label>
-              <input type="range" min="10" max="200" value={margin} onChange={(e) => setMargin(e.target.value)} className="w-full accent-indigo-600" />
-            </div>
-            <button onClick={handlePricing} disabled={loading} className="w-full bg-indigo-600 text-white font-bold text-xs py-2.5 rounded-xl shadow hover:bg-indigo-700 transition">
-              {loading ? 'Calculando con IA...' : 'Calcular Precio Óptimo'}
-            </button>
-          </div>
-        )}
-
-        {mode === 'variants' && (
-          <div className="space-y-3">
-            <h4 className="font-bold text-sm text-slate-900">Recomendador de Variantes y Combos</h4>
-            <p className="text-xs text-slate-500">Analiza tus {products.length} productos guardados para proponerte combinaciones con alta demanda.</p>
-            <button onClick={handleVariants} disabled={loading} className="w-full bg-purple-600 text-white font-bold text-xs py-2.5 rounded-xl shadow hover:bg-purple-700 transition">
-              {loading ? 'Analizando Catálogo...' : 'Generar Sugerencias de Variantes'}
-            </button>
-          </div>
-        )}
-
-        {aiResponse && (
-          <div className="mt-4 p-4 bg-slate-50 border border-indigo-100 rounded-2xl text-xs text-slate-700 whitespace-pre-line leading-relaxed">
-            <strong className="text-indigo-600 block mb-1">Respuesta de Gemini AI:</strong>
-            {aiResponse}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ==========================================
-// MODALES (CARRITO, CREAR TIENDA, NUEVO PRODUCTO)
-// ==========================================
-function CartModal({ isOpen, onClose, cart, total, onRemove, onCheckout }) {
-  const [customer, setCustomer] = useState({ name: '', email: '', address: '' });
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex justify-end">
-      <div className="bg-white max-w-md w-full h-full p-6 shadow-2xl flex flex-col justify-between overflow-y-auto">
-        <div>
-          <div className="flex justify-between items-center pb-4 border-b border-slate-100">
-            <h3 className="font-bold text-slate-900 text-base">Carrito de Compras</h3>
-            <button onClick={onClose} className="text-slate-400 hover:text-slate-600">✕</button>
-          </div>
-          <div className="divide-y divide-slate-100 my-4">
-            {cart.map((item, idx) => (
-              <div key={idx} className="py-3 flex justify-between items-center">
-                <div>
-                  <h4 className="font-bold text-xs text-slate-900">{item.product.name}</h4>
-                  <span className="text-[10px] text-indigo-600">Tienda: {item.store.name}</span>
-                  <p className="text-[11px] text-slate-500">${item.product.price.toLocaleString()} x {item.quantity}</p>
-                </div>
-                <button onClick={() => onRemove(idx)} className="text-red-400 text-xs font-bold">Quitar</button>
-              </div>
-            ))}
-            {cart.length === 0 && <p className="text-center py-10 text-xs text-slate-400">Tu carrito está vacío</p>}
-          </div>
-        </div>
-
-        {cart.length > 0 && (
-          <div className="space-y-3 pt-4 border-t border-slate-100">
-            <div className="flex justify-between font-bold text-sm">
-              <span>Total:</span>
-              <span className="text-indigo-600">${total.toLocaleString()}</span>
-            </div>
-            <input type="text" placeholder="Nombre Completo" value={customer.name} onChange={(e) => setCustomer({ ...customer, name: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs" />
-            <input type="email" placeholder="Email" value={customer.email} onChange={(e) => setCustomer({ ...customer, email: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs" />
-            <button onClick={() => onCheckout(customer)} className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl text-xs shadow hover:bg-indigo-700">Comprar Ahora</button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function CreateStoreModal({ isOpen, onClose, onCreate }) {
-  const [form, setForm] = useState({ name: '', description: '', owner: '', logo: '' });
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
-        <h3 className="font-bold text-slate-900 text-base">Crear Nueva Tienda</h3>
-        <input type="text" placeholder="Nombre de la Tienda" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs" />
-        <textarea placeholder="Descripción" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs" />
-        <input type="text" placeholder="Nombre del Dueño" value={form.owner} onChange={(e) => setForm({ ...form, owner: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs" />
-        <div className="flex space-x-2">
-          <button onClick={onClose} className="w-1/2 bg-slate-100 font-bold text-xs py-2 rounded-xl">Cancelar</button>
-          <button onClick={() => onCreate(form)} className="w-1/2 bg-indigo-600 text-white font-bold text-xs py-2 rounded-xl shadow">Crear Tienda</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AddProductModal({ isOpen, onClose, onAdd }) {
-  const [form, setForm] = useState({ name: '', price: '', stock: '', description: '', image: '' });
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-3">
-        <h3 className="font-bold text-slate-900 text-base">Agregar Producto</h3>
-        <input type="text" placeholder="Nombre Producto" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs" />
-        <div className="grid grid-cols-2 gap-2">
-          <input type="number" placeholder="Precio ($)" value={form.price} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs" />
-          <input type="number" placeholder="Stock" value={form.stock} onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })} className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs" />
-        </div>
-        <textarea placeholder="Descripción" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs" />
-        <input type="text" placeholder="URL de la Imagen" value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs" />
-        <div className="flex space-x-2 pt-2">
-          <button onClick={onClose} className="w-1/2 bg-slate-100 font-bold text-xs py-2 rounded-xl">Cancelar</button>
-          <button onClick={() => onAdd(form)} className="w-1/2 bg-indigo-600 text-white font-bold text-xs py-2 rounded-xl shadow">Guardar</button>
-        </div>
-      </div>
+      {/* PIE DE PÁGINA */}
+      <footer className="bg-white border-t border-gray-200 py-6 text-center text-xs text-gray-500">
+        <p>© 2026 FOCA.app — Plataforma E-commerce Multitienda con Inteligencia Artificial.</p>
+      </footer>
     </div>
   );
 }
